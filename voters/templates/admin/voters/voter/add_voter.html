@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Add New Voter</h2>
+    <form method="POST" id="addVoterForm" class="mt-3">
+        {% csrf_token %}
+        <div class="row">
+            {% for field in excel_fields %}
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ field|lower }}">{{ field }}</label>
+                    <input
+                        type="{% if field == 'AGE' %}number{% else %}text{% endif %}"
+                        class="form-control"
+                        id="{{ field|lower }}"
+                        name="{{ field }}"
+                        {% if field =="MOBILE NO" %}pattern="[0-9]{10}"{% endif %}
+                        {% if field in required_fields %}required{% endif %}
+                        {% if field == "AGE" %}min="18" max="120"{% endif %}
+                    >
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary">Add Voter</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('addVoterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Reset previous error states
+    this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    this.querySelectorAll('.invalid-feedback').forEach(el => el.innerHTML = '');
+
+    const formData = new FormData(this);
+    const data = {};
+
+    // Convert form data to object and validate
+    for (let [key, value] of formData.entries()) {
+        data[key] = value.trim();
+
+        // Basic validation
+        if (key === 'MOBILE NO' && value && !/^\d{10}$/.test(value)) {
+            const input = this.querySelector(`[name="${key}"]`);
+            input.classList.add('is-invalid');
+            input.nextElementSibling.innerHTML = 'Mobile number must be 10 digits';
+            return;
+        }
+
+        if (key === 'AGE' && value && (parseInt(value) < 18 || parseInt(value) > 120)) {
+            const input = this.querySelector(`[name="${key}"]`);
+            input.classList.add('is-invalid');
+            input.nextElementSibling.innerHTML = 'Age must be between 18 and 120';
+            return;
+        }
+    }
+
+    // Submit data
+    fetch('{% url "admin:add-voter" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Voter added successfully!');
+            window.location.href = '{% url "admin:voters_voter_changelist" %}';
+        } else {
+            if (data.errors) {
+                Object.entries(data.errors).forEach(([field, error]) => {
+                    const input = this.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        input.nextElementSibling.innerHTML = error;
+                    }
+                });
+            } else {
+                alert('Error: ' + data.message);
+            }
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+});
+</script>
+
+<style>
+.form-group {
+    margin-bottom: 1rem;
+}
+.invalid-feedback {
+    display: none;
+    color: #dc3545;
+    font-size: 80%;
+}
+.form-control.is-invalid {
+    border-color: #dc3545;
+}
+.form-control.is-invalid + .invalid-feedback {
+    display: block;
+}
+</style>
+{% endblock %}
