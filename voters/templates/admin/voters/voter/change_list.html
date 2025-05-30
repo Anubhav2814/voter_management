@@ -6,40 +6,41 @@
 {% load i18n admin_urls %}
 {% csrf_token %}
 
-
-
 {% block content %}
 <div id="content-main">
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <button class="btn btn-success" onclick="openModal()">
-            <i class="fas fa-plus"></i> Add Voter
-        </button>
-        <a href="{% url 'admin:voter-upload-excel' %}" class="btn btn-primary">
-            <i class="fas fa-file-excel"></i> Upload Excel
-        </a>
+    <!-- Header Section with Action Buttons -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1>Voter Management</h1>
+            <div class="status-info">
+                <div class="status-info-item">
+                    <span class="status-label">Current Date and Time (UTC):</span>
+                    <span class="status-value">{{ current_datetime|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                <div class="status-info-item">
+                    <span class="status-label">Current User:</span>
+                    <span class="status-value">{{ request.user.username }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="action-buttons">
+                <a href="{% url 'admin:voter-upload-excel' %}" class="btn btn-secondary">
+                    <i class="fas fa-file-excel"></i> Upload Excel
+                </a>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <i class="fas fa-plus"></i> Add Voter
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Status Information -->
-    <div class="status-info">
-        <div class="status-info-item">
-            <span class="status-label">Current Date and Time (UTC):</span>
-            <span class="status-value">{{ current_datetime|date:"Y-m-d H:i:s" }}</span>
-        </div>
-        <div class="status-info-item">
-            <span class="status-label">Current User's Login:</span>
-            <span class="status-value">{{ request.user.username }}</span>
-        </div>
-    </div>
-
-
-
-     <!-- Filter Controls -->
+    <!-- Filter Controls -->
     <div class="control-section filter-controls">
         <div class="section-header">
-            <h3>Filter Options</h3>
+            <h3><i class="fas fa-filter"></i> Filter Options</h3>
         </div>
-        <div class="filter-form horizontal">
+        <div class="filter-form">
             <div class="filters-row">
                 <div class="control-group">
                     <label for="mlc-filter">MLC Constituency:</label>
@@ -52,31 +53,27 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="assembly-filter">Assembly:</label>
                     <select id="assembly-filter" class="styled-select" disabled>
                         <option value="">All Assemblies</option>
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="mandal-filter">Mandal:</label>
                     <select id="mandal-filter" class="styled-select" disabled>
                         <option value="">All Mandals</option>
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="village-filter">Village:</label>
                     <select id="village-filter" class="styled-select" disabled>
                         <option value="">All Villages</option>
                     </select>
                 </div>
-
                 <div class="filter-actions">
                     <button id="apply-filters" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> Apply Filters
+                        <i class="fas fa-search"></i> Apply
                     </button>
                     <button id="clear-filters" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Clear
@@ -89,10 +86,10 @@
     <!-- Notification Controls -->
     <div class="control-section notification-controls">
         <div class="section-header">
-            <h3>Notification Settings</h3>
+            <h3><i class="fas fa-bell"></i> Notification Settings</h3>
         </div>
-        <div class="notification-controls">
-            <div class="notification-form">
+        <div class="notification-form">
+            <div class="notification-row">
                 <div class="control-group">
                     <label for="notification-type">Notification Type</label>
                     <select id="notification-type" class="styled-select">
@@ -102,7 +99,6 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="notification-template">Template</label>
                     <select id="notification-template" class="styled-select">
@@ -114,7 +110,6 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="notification-channel">Channel</label>
                     <select id="notification-channel" class="styled-select">
@@ -124,92 +119,219 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="notification-actions">
-                    <button id="send-notification-btn" onclick="sendNotification()" class="btn btn-primary">
-                        Send Notification
+                    <button id="send-notification-btn" onclick="sendNotification()" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Send
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Voters Table -->
-    <div class="table-container">
+    <!-- Voters Table Section -->
+    <div class="table-section">
         <div class="table-header">
-            <button id="bulk-delete-btn" class="btn btn-danger" onclick="bulkDeleteVoters()" disabled>
-                <i class="fas fa-trash"></i> Delete Selected
-            </button>
+            <div class="table-title">
+                <h3><i class="fas fa-users"></i> Voters List</h3>
+                <span class="record-count">Total Records: {{ cl.result_count }}</span>
+            </div>
+            <div class="table-actions">
+                <button id="bulk-delete-btn" class="btn btn-danger" onclick="bulkDeleteVoters()" disabled>
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </div>
         </div>
-        <div class="table-scroll">
-            <table id="voters-table">
-                <thead>
-                    <tr>
-                        <th class="fixed-column">
-                            <input type="checkbox" id="select-all" onclick="toggleAllVoters()">
-                        </th>
-                        {% for field in excel_fields %}
-                        <th>{{ field }}</th>
+
+        <div class="table-container">
+            <div class="table-scroll">
+                <table id="voters-table" class="voters-table">
+                    <thead>
+                        <tr>
+                            <th class="fixed-column checkbox-column">
+                                <input type="checkbox" id="select-all" onclick="toggleAllVoters()">
+                            </th>
+                            {% for field in excel_fields %}
+                            <th class="data-column">{{ field }}</th>
+                            {% endfor %}
+                            <th class="fixed-column-right actions-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in cl.result_list %}
+                        <tr class="voter-row">
+                            <td class="fixed-column checkbox-column">
+                                <input type="checkbox" class="voter-select" value="{{ result.id }}" onchange="updateBulkDeleteButton()">
+                            </td>
+                            {% for field in excel_fields %}
+                            <td class="data-column">{{ result|get_field_value:field }}</td>
+                            {% endfor %}
+                            <td class="fixed-column-right actions-column">
+                                <div class="action-buttons-group">
+                                    <button class="btn-icon edit-btn" onclick="editVoter({{ result.id }})" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-icon delete-btn" onclick="deleteVoter({{ result.id }})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
                         {% endfor %}
-                        <th class="fixed-column-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for result in cl.result_list %}
-                    <tr>
-                        <td class="fixed-column">
-                            <input type="checkbox" class="voter-select" value="{{ result.id }}" onchange="updateBulkDeleteButton()">
-                        </td>
-                        {% for field in excel_fields %}
-                        <td>{{ result|get_field_value:field }}</td>
-                        {% endfor %}
-                        <td class="fixed-column-right">
-                            <button class="btn-icon edit-btn" onclick="editVoter({{ result.id }})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon delete-btn" onclick="deleteVoter({{ result.id }})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
         {% if cl.result_count %}
-        <div class="pagination">
+        <div class="pagination-container">
             {% pagination cl %}
         </div>
         {% endif %}
     </div>
 </div>
 
+<!-- Add Voter Modal -->
+<div id="add-voter-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Voter</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="add-voter-form">
+                <div class="form-grid">
+                    {% for field in excel_fields %}
+                    <div class="form-group {% if field in 'MLC CONSTITUNCY,ASSEMBLY,MANDAL,SNO,MOBILE NO' %}required{% endif %}">
+                        <label for="{{ field|slugify }}">{{ field }}:</label>
+                        <input type="text" id="{{ field|slugify }}" name="{{ field }}"
+                               {% if field in 'MLC CONSTITUNCY,ASSEMBLY,MANDAL,SNO,MOBILE NO' %}required{% endif %}>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Voter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block footer %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
-/* General Layout */
-    #content-main {
-        padding: 20px;
-        background: #f8f9fa;
-    }
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-    /* Info Header */
-    .info-header {
-        display: flex;
-        justify-content: space-between;
-        padding: 15px;
-        background: white;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f7fa;
+}
 
-    /* Action Buttons */
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
+/* Main Content Container */
+#content-main {
+    padding: 24px;
+    background: #f5f7fa;
+    min-height: 100vh;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 32px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header-left {
+    flex: 1;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Status Info */
+.status-info {
+    display: flex;
+    gap: 32px;
+    margin-top: 16px;
+}
+
+.status-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.status-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Control Sections */
+.control-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    overflow: hidden;
+    border: 1px solid #e1e8ed;
+}
+
+.section-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 20px 24px;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-header i {
+    color: #667eea;
+    font-size: 1.1rem;
+}
     /* Filter Controls Styles */
     .filter-controls {
         margin-bottom: 20px;
@@ -291,6 +413,8 @@
         font-weight: 500;
     }
 
+
+
     /* Responsive Design */
     @media (max-width: 1200px) {
         .filters-row {
@@ -325,145 +449,331 @@
     }
 
     /* Modal Styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-    }
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
 
-    .modal-content {
-        background-color: #fefefe;
-        margin: 5% auto;
-        padding: 20px;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
+.modal-content {
+    background: white;
+    margin: 3% auto;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
 
-    .close {
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
     }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+    line-height: 1;
+}
+
+.close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 32px;
+}
 
     /* Form Styles */
-    .form-group {
-        margin-bottom: 15px;
-    }
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
 
-    .form-group.required label:after {
-        content: " *";
-        color: red;
-    }
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
-    .form-group input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
+.form-group.required label::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
 
-    /* Table Styles */
-    .table-container {
-        background: white;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+.form-group label {
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
-    .table-scroll {
-        overflow-x: auto;
-    }
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #2d3748;
+    transition: all 0.2s ease;
+    background-color: white;
+}
 
-    #voters-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
 
-    #voters-table th,
-    #voters-table td {
-        padding: 12px;
-        border: 1px solid #dee2e6;
-    }
+.form-group input:invalid {
+    border-color: #dc3545;
+}
 
-    #voters-table th {
-        background: #f8f9fa;
-        font-weight: 600;
-    }
+.form-group input:invalid:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
 
-    .fixed-column,
-    .fixed-column-right {
-        position: sticky;
-        background: inherit;
-        z-index: 2;
-    }
+    /* Table Section */
+.table-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e1e8ed;
+}
 
-    .fixed-column {
-        left: 0;
-    }
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-bottom: 1px solid #e1e8ed;
+}
 
-    .fixed-column-right {
-        right: 0;
-    }
+.table-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
 
-    /* Button Styles */
-    .btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
+.table-title h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-    .btn-primary {
-        background: #007bff;
-        color: white;
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-
-    .btn-danger {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-icon {
-        padding: 6px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: #6c757d;
-    }
-    btn-danger {
-    background-color: #dc3545;
+.record-count {
+    background: #667eea;
     color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.table-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Table Container */
+.table-container {
+    overflow: hidden;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    max-height: 70vh;
+}
+
+/* Table Styles */
+#voters-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+#voters-table th {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    color: white;
+    padding: 16px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #2d3748;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#voters-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    background: white;
+}
+
+#voters-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+#voters-table tbody tr:hover {
+    background-color: #f7fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+#voters-table tbody tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+#voters-table tbody tr:nth-child(even):hover {
+    background-color: #f1f5f9;
+}
+
+/* Fixed Columns */
+.fixed-column,
+.fixed-column-right {
+    position: sticky;
+    z-index: 5;
+    background: inherit;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.fixed-column {
+    left: 0;
+    min-width: 60px;
+    text-align: center;
+}
+
+.fixed-column-right {
+    right: 0;
+    min-width: 120px;
+    text-align: center;
+}
+
+.checkbox-column {
+    width: 60px;
+    text-align: center;
+}
+
+.actions-column {
+    width: 120px;
+    text-align: center;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
     cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
 }
 
 .btn-danger:hover {
-    background-color: #c82333;
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
 }
 
-.btn-danger:disabled {
-    background-color: #dc354580;
+.btn:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
     /* Responsive Design */
