@@ -1,0 +1,349 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .form-row {
+    margin-bottom: 20px;
+  }
+
+  .media-preview {
+    max-width: 300px;
+    margin: 10px 0;
+  }
+
+  .media-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 5px;
+    border: 2px solid #ddd;
+  }
+
+  .video-preview {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    padding-bottom: 56.25%;
+    margin: 10px 0;
+  }
+
+  .video-preview iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 4px;
+  }
+
+  .multiple-images-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+  }
+
+  .multiple-images-preview img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 2px solid #ddd;
+  }
+
+  .multiple-videos-preview {
+    margin: 10px 0;
+  }
+
+  .video-item {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+  }
+
+  .field-box {
+    margin-bottom: 15px;
+  }
+
+  .help-text {
+    color: #6b7280;
+    font-size: 0.9em;
+    margin-top: 4px;
+  }
+
+  #media_type {
+    margin-bottom: 10px;
+  }
+
+  .dynamic-fields {
+    display: none;
+  }
+
+  .dynamic-fields.active {
+    display: block;
+  }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 4px;
+    background: #059669;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+    z-index: 1000;
+  }
+
+  .media-type-section {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 10px 0;
+    background: #f8f9fa;
+  }
+
+  .section-title {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 5px;
+  }
+
+  .file-count {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 5px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Form Content -->
+    {{ block.super }}
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const mediaTypeSelect = document.getElementById('id_media_type');
+    const imageField = document.getElementById('id_image').closest('.form-row');
+    const multipleImagesField = document.getElementById('id_multiple_images').closest('.form-row');
+    const videoField = document.getElementById('id_video_link').closest('.form-row');
+    const multipleVideosField = document.getElementById('id_multiple_video_links').closest('.form-row');
+
+    function toggleFields() {
+      const selectedType = mediaTypeSelect.value;
+
+      // Hide all fields first
+      imageField.style.display = 'none';
+      multipleImagesField.style.display = 'none';
+      videoField.style.display = 'none';
+      multipleVideosField.style.display = 'none';
+
+      if (selectedType === 'image') {
+        imageField.style.display = 'block';
+        multipleImagesField.style.display = 'block';
+      } else if (selectedType === 'video') {
+        videoField.style.display = 'block';
+        multipleVideosField.style.display = 'block';
+      } else if (selectedType === 'mixed') {
+        imageField.style.display = 'block';
+        multipleImagesField.style.display = 'block';
+        videoField.style.display = 'block';
+        multipleVideosField.style.display = 'block';
+      }
+    }
+
+    // Initial toggle
+    toggleFields();
+
+    // Listen for changes
+    mediaTypeSelect.addEventListener('change', toggleFields);
+
+    // Single image preview
+    const imageInput = document.getElementById('id_image');
+    if (imageInput) {
+      imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            let preview = document.querySelector('.single-image-preview');
+            if (!preview) {
+              preview = document.createElement('div');
+              preview.className = 'single-image-preview media-preview';
+              imageInput.parentNode.appendChild(preview);
+            }
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // Multiple images preview
+    const multipleImagesInput = document.getElementById('id_multiple_images');
+    if (multipleImagesInput) {
+      multipleImagesInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        let preview = document.querySelector('.multiple-images-preview');
+
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'multiple-images-preview';
+          multipleImagesInput.parentNode.appendChild(preview);
+        }
+
+        preview.innerHTML = '';
+
+        files.forEach(file => {
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              const img = document.createElement('img');
+              img.src = e.target.result;
+              img.alt = file.name;
+              preview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+
+        // Add file count
+        const countDiv = document.createElement('div');
+        countDiv.className = 'file-count';
+        countDiv.textContent = `${files.length} image(s) selected`;
+        preview.appendChild(countDiv);
+      });
+    }
+
+    // Single video preview
+    const videoInput = document.getElementById('id_video_link');
+    if (videoInput) {
+      videoInput.addEventListener('change', function() {
+        const videoUrl = this.value;
+        let preview = document.querySelector('.single-video-preview');
+
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'single-video-preview video-preview';
+          videoInput.parentNode.appendChild(preview);
+        }
+
+        if (videoUrl) {
+          const embedUrl = getVideoEmbedUrl(videoUrl);
+          if (embedUrl) {
+            preview.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+          }
+        } else {
+          preview.innerHTML = '';
+        }
+      });
+    }
+
+    // Multiple videos preview
+    const multipleVideosInput = document.getElementById('id_multiple_video_links');
+    if (multipleVideosInput) {
+      multipleVideosInput.addEventListener('input', function() {
+        const videoUrls = this.value.split('\n').filter(url => url.trim());
+        let preview = document.querySelector('.multiple-videos-preview');
+
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'multiple-videos-preview';
+          multipleVideosInput.parentNode.appendChild(preview);
+        }
+
+        preview.innerHTML = '';
+
+        videoUrls.forEach((url, index) => {
+          const trimmedUrl = url.trim();
+          if (trimmedUrl) {
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item';
+
+            const embedUrl = getVideoEmbedUrl(trimmedUrl);
+            if (embedUrl) {
+              videoItem.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                  <strong>Video ${index + 1}:</strong> ${trimmedUrl}
+                </div>
+                <div class="video-preview">
+                  <iframe src="${embedUrl}" allowfullscreen></iframe>
+                </div>
+              `;
+            } else {
+              videoItem.innerHTML = `
+                <div style="color: #dc2626;">
+                  <strong>Invalid URL:</strong> ${trimmedUrl}
+                </div>
+              `;
+            }
+
+            preview.appendChild(videoItem);
+          }
+        });
+
+        // Add count
+        const countDiv = document.createElement('div');
+        countDiv.className = 'file-count';
+        countDiv.textContent = `${videoUrls.length} video(s) added`;
+        preview.appendChild(countDiv);
+      });
+    }
+
+    function getVideoEmbedUrl(url) {
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        let videoId;
+        if (url.includes('youtube.com')) {
+          videoId = url.split('v=')[1];
+          if (videoId) {
+            const ampersandPosition = videoId.indexOf('&');
+            if (ampersandPosition !== -1) {
+              videoId = videoId.substring(0, ampersandPosition);
+            }
+          }
+        } else {
+          videoId = url.split('youtu.be/')[1];
+          if (videoId) {
+            const questionPosition = videoId.indexOf('?');
+            if (questionPosition !== -1) {
+              videoId = videoId.substring(0, questionPosition);
+            }
+          }
+        }
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+      } else if (url.includes('vimeo.com')) {
+        const videoId = url.split('vimeo.com/')[1];
+        return videoId ? `https://player.vimeo.com/video/${videoId}` : null;
+      }
+      return null;
+    }
+  });
+
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'block';
+    toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3000);
+  }
+</script>
+{% endblock %}
