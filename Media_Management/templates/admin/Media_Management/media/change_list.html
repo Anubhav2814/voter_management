@@ -1,0 +1,326 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.9em;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        color: white;
+    }
+
+    .action-btn i {
+        margin-right: 4px;
+    }
+
+    .edit-btn {
+        background-color: #10b981;
+    }
+
+    .edit-btn:hover {
+        background-color: #059669;
+        color: white;
+    }
+
+    .preview-btn {
+        background-color: #3b82f6;
+    }
+
+    .preview-btn:hover {
+        background-color: #2563eb;
+        color: white;
+    }
+
+    .archive-btn {
+        background-color: #ef4444;
+    }
+
+    .archive-btn:hover {
+        background-color: #dc2626;
+        color: white;
+    }
+
+    /* Current Info Bar */
+    .current-info {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 15px;
+        background: #f8fafc;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 0.9em;
+        color: #475569;
+    }
+
+    /* Horizontal Filters */
+    .horizontal-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 15px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-group select {
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        min-width: 150px;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        margin-left: auto;
+    }
+
+    .filter-btn {
+        padding: 6px 15px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .apply-filters {
+        background: #2563eb;
+        color: white;
+    }
+
+    .clear-filters {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    .status-draft { background: #fef3c7; color: #92400e; }
+    .status-published { background: #dcfce7; color: #166534; }
+    .status-archived { background: #fee2e2; color: #991b1b; }
+
+    /* Toast notification */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 4px;
+        background: #059669;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: none;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+
+    <!-- Horizontal Filters -->
+    <div class="horizontal-filters">
+        <div class="filter-group">
+            <label>Status:</label>
+            <select id="status-filter">
+                <option value="">All</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Media Type:</label>
+            <select id="media-type-filter">
+                <option value="">All</option>
+                {% for value, label in media_type_choices %}
+                <option value="{{ value }}" {% if current_media_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Category:</label>
+            <select id="category-filter">
+                <option value="">All</option>
+                {% for value, label in category_choices %}
+                <option value="{{ value }}" {% if current_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button class="filter-btn apply-filters" onclick="applyFilters()">Apply Filters</button>
+            <button class="filter-btn clear-filters" onclick="clearFilters()">Clear Filters</button>
+        </div>
+    </div>
+
+    <!-- Active Filters Display -->
+    <div class="active-filters">
+        {% if current_status %}
+        <div class="active-filter">
+            Status: {{ current_status|title }}
+            <span class="remove" onclick="removeFilter('status')">&times;</span>
+        </div>
+        {% endif %}
+        {% if current_media_type %}
+        <div class="active-filter">
+            Type: {{ current_media_type|title }}
+            <span class="remove" onclick="removeFilter('media_type')">&times;</span>
+        </div>
+        {% endif %}
+        {% if current_category %}
+        <div class="active-filter">
+            Category: {{ current_category|title }}
+            <span class="remove" onclick="removeFilter('category')">&times;</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    {{ block.super }}
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.style.display = 'block';
+        toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function archiveMedia(mediaId) {
+        if (!confirm('Are you sure you want to archive this media?')) {
+            return;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        // Updated URL to match the new URL pattern
+        fetch(`/admin/Media_Management/media/${mediaId}/archive/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast(data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error archiving media', 'error');
+            console.error('Error:', error);
+        });
+    }
+
+     function applyFilters() {
+        const status = document.getElementById('status-filter').value;
+        const mediaType = document.getElementById('media-type-filter').value;
+        const category = document.getElementById('category-filter').value;
+
+        let url = new URL(window.location.href);
+
+        // Only add parameters if they have values
+        if (status) url.searchParams.set('status', status);
+        else url.searchParams.delete('status');
+
+        if (mediaType) url.searchParams.set('media_type', mediaType);
+        else url.searchParams.delete('media_type');
+
+        if (category) url.searchParams.set('category', category);
+        else url.searchParams.delete('category');
+
+        window.location.href = url.toString();
+    }
+
+    function clearFilters() {
+        const url = new URL(window.location.href);
+        // Remove all filter parameters
+        url.searchParams.delete('status');
+        url.searchParams.delete('media_type');
+        url.searchParams.delete('category');
+        window.location.href = url.toString();
+    }
+
+    function removeFilter(filterName) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete(filterName);
+        window.location.href = url.toString();
+    }
+
+    // Load saved filter values
+    document.addEventListener('DOMContentLoaded', function() {
+        const url = new URL(window.location.href);
+
+        // Set current values in filters
+        document.getElementById('status-filter').value = url.searchParams.get('status') || '';
+        document.getElementById('media-type-filter').value = url.searchParams.get('media_type') || '';
+        document.getElementById('category-filter').value = url.searchParams.get('category') || '';
+    });
+</script>
+{% endblock %}
